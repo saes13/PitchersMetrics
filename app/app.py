@@ -203,7 +203,6 @@ if page == "🏠 Home":
         st.image("images/BG/pitcher.png", width=150)
 
     with col2:
-        st.title("Pitchers Metrics ⚾")
         st.write("""
         Bienvenido a Pitchers Metrics, tu asistente para analizar y predecir el desempeño de los pitchers contra bateadores específicos usando Machine Learning.
 
@@ -250,6 +249,17 @@ elif page == "⚾ Predicción de rendimiento":
 
             if not df_test.empty:
                 if df_test.shape[0] >= 3:  # mínimo 3 datos para predecir
+                    # Ajustar df_test para que tenga exactamente las columnas que espera el modelo
+                    feature_names_modelo = model.feature_names_in_
+
+                    # Agregar columnas faltantes con ceros
+                    for col in feature_names_modelo:
+                        if col not in df_test.columns:
+                            df_test[col] = 0
+
+                    # Eliminar columnas sobrantes que no estén en el modelo
+                    df_test = df_test[feature_names_modelo]
+
                     prediction = model.predict_proba(df_test)[:, 1].mean()
                     prediction = min(max(prediction, 0.05), 0.95)  # limitar entre 5% y 95%
                     results.append((pitcher, prediction))
