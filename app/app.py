@@ -204,15 +204,12 @@ if page == "🏠 Home":
 
     with col2:
         st.write("""
-        Bienvenido a Pitchers Metrics, tu asistente para analizar y predecir el desempeño de los pitchers contra bateadores específicos usando Machine Learning.
+        Pitchers Metrics, el software de analisis y predeción de el desempeño de los pitchers contra bateadores 
+                 específicos usando Machine Learning.
 
-        🟢 **¿Qué puedes hacer aquí?**  
-        - Predecir probabilidad de embasado.
-        - Simular innings de partidos reales.
-        - Ver estadísticas históricas de enfrentamientos.
-        - Registrar nuevos datos para mejorar el modelo.
-
-        ¡Optimiza tu estrategia y toma mejores decisiones en el juego!
+        Podrás elegir la mejor estrategia para enfrentar a los bateadores para cada inning, 
+        basado en las estadísticas de los partidos anteriores.
+                 
         """)
 
 #vista de predicciones
