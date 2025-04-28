@@ -12,7 +12,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.preprocessing import load_and_clean_data
 
-# Cachear carga de datos y modelo
 @st.cache_data
 def cargar_datos():
     return pd.read_csv("data/BateadorVsPitcher.csv")
@@ -31,7 +30,6 @@ def cargar_columnas():
     else:
         return None
 
-# Función para entrenar el modelo si no existe
 def entrenar_modelo_si_no_existe():
     model_path = "models/model.pkl"
     if not os.path.exists(model_path):
@@ -59,18 +57,15 @@ def dibujar_campo():
     ax.set_xlim(-1, 1)
     ax.set_ylim(-0.2, 1.2)
 
-    # Bases
     ax.plot([0, 0.7], [0, 0.7], color='black')
     ax.plot([0, -0.7], [0, 0.7], color='black')
     ax.plot([-0.7, 0.7], [0.7, 0.7], color='black')
 
-    # Bases markers
     ax.plot(0, 0, 's', markersize=20, color='white', markeredgecolor='black')  # Home
     ax.plot(0.7, 0.7, 's', markersize=20, color='white', markeredgecolor='black')  # 1B
     ax.plot(-0.7, 0.7, 's', markersize=20, color='white', markeredgecolor='black')  # 2B
     ax.plot(0, 1.0, 's', markersize=20, color='white', markeredgecolor='black')  # 3B
 
-    # Jugadores en bases
     if st.session_state.en_primera:
         ax.plot(0.7, 0.7, 'o', markersize=20, color='blue')
     if st.session_state.en_segunda:
@@ -187,7 +182,6 @@ st.sidebar.title("Navegación")
 page = st.sidebar.radio("Selecciona una vista", [
     "🏠 Home",
     "⚾ Predicción de rendimiento",
-    "🥎 Simulación de Partidos",
     "📊 Estadísticas por Pitcher",
     "📝 Registro"
 ])
@@ -245,20 +239,17 @@ elif page == "⚾ Predicción de rendimiento":
             df_test = df_test.reindex(columns=feature_columns, fill_value=0)
 
             if not df_test.empty:
-                if df_test.shape[0] >= 3:  # mínimo 3 datos para predecir
-                    # Ajustar df_test para que tenga exactamente las columnas que espera el modelo
+                if df_test.shape[0] >= 3: 
                     feature_names_modelo = model.feature_names_in_
 
-                    # Agregar columnas faltantes con ceros
                     for col in feature_names_modelo:
                         if col not in df_test.columns:
                             df_test[col] = 0
 
-                    # Eliminar columnas sobrantes que no estén en el modelo
                     df_test = df_test[feature_names_modelo]
 
                     prediction = model.predict_proba(df_test)[:, 1].mean()
-                    prediction = min(max(prediction, 0.05), 0.95)  # limitar entre 5% y 95%
+                    prediction = min(max(prediction, 0.05), 0.95)
                     results.append((pitcher, prediction))
                 else:
                     print(f"El pitcher {pitcher} tiene muy pocos enfrentamientos para predicción confiable.")
@@ -273,16 +264,13 @@ elif page == "⚾ Predicción de rendimiento":
             st.dataframe(df_results.round(2))
             st.bar_chart(df_results.set_index("Pitcher")["Efectividad del Pitcher (%)"])
 
-            # Mostrar selector de pitcher basado en resultados
             pitcher_seleccionado = st.selectbox(
                 "Selecciona un pitcher para ver su resumen de efectividad:",
                 options=df_results["Pitcher"].tolist()
             )
 
-            # Filtrar el pitcher seleccionado
             efectividades = df_results[df_results["Pitcher"] == pitcher_seleccionado]["Efectividad del Pitcher (%)"].tolist()
 
-            # Generar resumen actualizado
             resumen = generar_resumen(
                 pitcher_seleccionado,
                 efectividades,
@@ -290,56 +278,12 @@ elif page == "⚾ Predicción de rendimiento":
             )
             st.markdown(resumen)
 
-            # Guardar en session_state por si quieres usar en otras vistas
             st.session_state.efectividades = efectividades
             st.session_state.bateadores_seleccionados = bateadores
             st.session_state.pitcher_seleccionado = pitcher_seleccionado
 
         else:
             st.warning("No hay suficientes datos para generar predicciones.")
-
-#vista de simulacion de partidos
-elif page == "🥎 Simulación de Partidos":
-    st.title("🥎 Simulación de Partidos")
-
-    entrenar_modelo_si_no_existe()
-    model = cargar_modelo()
-    feature_columns = cargar_columnas()
-    df = cargar_datos()
-
-    if not st.session_state.inning_activo:
-        bateadores = st.multiselect("Selecciona el orden de bateadores para el inning:", df["Bateador"].unique(), max_selections=9)
-        if st.button("Iniciar Inning"):
-            if bateadores:
-                st.session_state.bateadores_turno = bateadores
-                st.session_state.bateador_actual = bateadores[0]
-                st.session_state.inning_activo = True
-            else:
-                st.warning("Debes seleccionar al menos un bateador para iniciar.")
-    else:
-        st.subheader(f"Turno de: {st.session_state.bateador_actual}")
-        st.text(f"Outs: {st.session_state.outs} | Bolas: {st.session_state.bolas} | Strikes: {st.session_state.strikes}")
-
-        dibujar_campo()
-
-        recomendaciones = recomendar_pitchers(st.session_state.bateador_actual, df, model, feature_columns)
-        st.write("### 🧢 Recomendaciones de Pitchers para este bateador:")
-        for pitcher, prob in recomendaciones:
-            st.write(f"- {pitcher}: Probabilidad de que el bateador se embasase: {prob:.2f}")
-
-        if st.button("Lanzar Pitch"):
-            simular_lanzamiento()
-
-            if st.session_state.outs >= 3:
-                st.success("Inning Terminado!")
-                st.session_state.inning_activo = False
-            else:
-                st.session_state.turno += 1
-                if st.session_state.turno < len(st.session_state.bateadores_turno):
-                    st.session_state.bateador_actual = st.session_state.bateadores_turno[st.session_state.turno % len(st.session_state.bateadores_turno)]
-                else:
-                    st.session_state.turno = 0
-                    st.session_state.bateador_actual = st.session_state.bateadores_turno[0]
 
 #vista de estadisticas
 elif page == "📊 Estadísticas por Pitcher":
